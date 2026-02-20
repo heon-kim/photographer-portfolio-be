@@ -51,6 +51,10 @@ export class AboutService {
   }
 
   createImageUploadUrl(dto: CreateAboutImagePresignedUrlDto) {
+    if (!dto || typeof dto !== 'object') {
+      throw new BadRequestException('Request body is required');
+    }
+
     const fileName = this.validateFileName(dto.fileName);
     const contentType = this.validateContentType(dto.contentType);
     const normalizedFileName = this.normalizeFileName(fileName);
