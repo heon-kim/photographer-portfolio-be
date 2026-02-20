@@ -105,7 +105,75 @@ Auth API (로그인)
 - 비고:
   - 토큰 만료: 7일 (`expiresIn: '7d'`)
   - JWT payload: `{ sub: adminId, email }`
-  - Authorization 헤더에 `Bearer <accessToken>` 형태로 포함해 보호된 API 요청
+- Authorization 헤더에 `Bearer <accessToken>` 형태로 포함해 보호된 API 요청
+--------------------------------------------------
+
+### About API
+관리자 소개(About) 정보는 단일 row만 존재하며, 조회는 누구나 가능하지만 수정은 인증이 필요합니다. 이미지는 서버가 직접 받지 않고 아래 순서를 지켜야 합니다.
+
+1. `POST /about/image/presigned-url` 호출 → S3 업로드용 `uploadUrl`과 최종 `fileUrl` 확보
+2. 프론트엔드가 `uploadUrl`로 S3에 직접 PUT 업로드
+3. 업로드 성공 시 반환받은 `fileUrl`을 `PUT /about`의 `imageUrl` 필드에 전달
+4. About 데이터 저장 및 조회 시 DB에 저장된 `imageUrl` 사용
+
+**GET /about**
+--------------------------------------------------
+- 권한: Public
+- Response 200 OK:
+```
+{
+  "id": 1,
+  "artistName": "작가 이름",
+  "description": "소개 문구 (100자 미만)",
+  "imageUrl": "https://..." | null,
+  "updatedAt": "2026-02-20T12:34:56.000Z"
+}
+```
+--------------------------------------------------
+
+**PUT /about**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Headers: `Content-Type: application/json`
+- Request Body:
+```
+{
+  "artistName": "작가 이름 (필수)",
+  "description": "소개 문구 (필수, 100자 미만)",
+  "imageUrl": "https://<bucket>.s3.<region>.amazonaws.com/..." | "" | null (선택)
+}
+```
+  - `imageUrl`에 빈 문자열 혹은 `null`을 전달하면 기존 이미지를 제거
+  - presigned 업로드 완료 후 반환된 `fileUrl`만 허용 (임의 URL 금지)
+- Response 200 OK: GET과 동일한 형태
+- Validation Errors (400 Bad Request):
+  - `artistName`/`description`이 비어 있거나 100자 이상인 경우
+  - `imageUrl`이 문자열/`null` 이외의 타입인 경우
+--------------------------------------------------
+
+**POST /about/image/presigned-url**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Headers: `Content-Type: application/json`
+- Request Body:
+```
+{
+  "fileName": "profile.png",
+  "contentType": "image/png"
+}
+```
+- Response 200 OK:
+```
+{
+  "uploadUrl": "https://s3.amazonaws.com/...&X-Amz-Signature=...",
+  "fileUrl": "https://<bucket>.s3.<region>.amazonaws.com/about/1739999999999-uuid-profile.png",
+  "expiresInSeconds": 300
+}
+```
+- 비고:
+  - `contentType`은 반드시 `image/*` MIME 이어야 함
+  - presigned URL 유효시간은 5분
+  - 업로드 성공 후 `fileUrl` 값을 `PUT /about`의 `imageUrl`로 전달
 --------------------------------------------------
 
 
@@ -166,6 +234,12 @@ image_urls 예시:
 5. 업로드 성공 후 작품 생성 API 호출
 6. 서버가 DB에 URL 저장
 
+필요 환경 변수:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `AWS_BUCKET_NAME`
+
 ## 9. 이미지 순서 변경 정책
 
 - 이미지 순서는 DB가 관리하지 않음
@@ -190,4 +264,3 @@ image_urls 예시:
 - 이미지 단위 히스토리 필요
 
 → works + work_images 테이블 구조 전환
-

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { randomUUID } from 'crypto';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
 export class S3Service {
-  private s3 = new S3Client({
+  private readonly s3 = new S3Client({
     region: process.env.AWS_REGION,
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -12,18 +12,31 @@ export class S3Service {
     },
   });
 
-  async uploadFile(file: Express.Multer.File) {
-    const key = `${randomUUID()}-${file.originalname}`;
+  private readonly bucketName = process.env.AWS_BUCKET_NAME!;
+  private readonly region = process.env.AWS_REGION!;
+  private readonly publicBaseUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com`;
 
-    await this.s3.send(
-      new PutObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      }),
-    );
+  async createPresignedUploadUrl(params: {
+    key: string;
+    contentType: string;
+    expiresInSeconds?: number;
+  }) {
+    const { key, contentType, expiresInSeconds = 300 } = params;
 
-    return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(this.s3, command, {
+      expiresIn: expiresInSeconds,
+    });
+
+    return {
+      uploadUrl,
+      fileUrl: `${this.publicBaseUrl}/${key}`,
+      expiresInSeconds,
+    };
   }
 }
