@@ -176,6 +176,106 @@ Auth API (로그인)
   - 업로드 성공 후 `fileUrl` 값을 `PUT /about`의 `imageUrl`로 전달
 --------------------------------------------------
 
+### Works API
+작품 데이터는 공개 조회가 가능하며, 생성/수정/삭제/이미지 업로드 presigned URL 발급은 관리자 전용입니다. 모든 이미지 URL은 반드시 `POST /works/image/presigned-url`을 통해 받은 `fileUrl`만 허용합니다.
+
+**GET /works**
+--------------------------------------------------
+- 권한: Public
+- Query Params:
+  - `limit` (선택, 1~50, 기본 12)
+  - `cursor` (선택, 이전 응답의 마지막 `id`)
+- 정렬: `createdAt DESC`, `id DESC`
+- Response 200 OK:
+```
+[
+  {
+    "id": 12,
+    "title": "작품명",
+    "year": 2024,
+    "thumbnailUrl": "https://<bucket>.s3.<region>.amazonaws.com/works/...",
+    "imageUrls": ["https://.../image1.jpg", "..."],
+    "createdAt": "2026-02-23T05:12:34.000Z",
+    "updatedAt": "2026-02-23T05:12:34.000Z"
+  }
+]
+```
+- 커서 기반 페이지네이션: 다음 페이지 요청 시 `cursor`에 이전 응답 마지막 row의 `id` 전달
+--------------------------------------------------
+
+**GET /works/:id**
+--------------------------------------------------
+- 권한: Public
+- Path Params: `id` (number)
+- Response 200 OK: 단일 작품, 필드 구조는 GET /works 요소와 동일
+- 404 Not Found: 없는 `id`
+--------------------------------------------------
+
+**POST /works**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Headers: `Content-Type: application/json`
+- Request Body:
+```
+{
+  "title": "작품명",
+  "year": 2024,
+  "thumbnailUrl": "https://<bucket>.s3.<region>.amazonaws.com/works/...",
+  "imageUrls": [
+    "https://<bucket>.s3.<region>.amazonaws.com/works/...-1.jpg",
+    "https://<bucket>.s3.<region>.amazonaws.com/works/...-2.jpg"
+  ]
+}
+```
+- Response 201 Created: 생성된 row 전체 (id, timestamps 포함)
+- Validation Rules:
+  - `title`: string, 공백 불가, 100자 이하
+  - `year`: 1900~현재 연도
+  - `imageUrls`: 1~20개, 모두 presigned S3 URL
+  - `thumbnailUrl`: 선택, null 허용, presigned S3 URL
+--------------------------------------------------
+
+**PUT /works/:id**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Request Body: POST와 동일 구조 (필수 필드만 포함해도 되지만 최소 1개 필드 필요)
+- 동작: 전달된 필드로 전체 덮어쓰기. `imageUrls`는 `{ set: [...] }` 방식으로 순서를 포함해 전부 교체되므로, 프론트에서 정렬 후 전체 배열 전달.
+- Response 200 OK: 갱신된 row
+- 404 Not Found: 없는 `id`
+--------------------------------------------------
+
+**DELETE /works/:id**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Response 204 No Content
+- 404 Not Found: 없는 `id`
+--------------------------------------------------
+
+**POST /works/image/presigned-url**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Headers: `Content-Type: application/json`
+- Request Body:
+```
+{
+  "fileName": "work-main.png",
+  "contentType": "image/png"
+}
+```
+- Response 200 OK:
+```
+{
+  "uploadUrl": "https://s3.../works/...&X-Amz-Signature=...",
+  "fileUrl": "https://<bucket>.s3.<region>.amazonaws.com/works/1739999999999-uuid-work-main.png",
+  "expiresInSeconds": 300
+}
+```
+- 비고:
+  - 이미지 파일만 허용 (`image/*`)
+  - presigned URL 유효시간 5분
+  - 발급받은 `fileUrl`을 작품 생성/수정 시 `thumbnailUrl` 혹은 `imageUrls`에 그대로 사용
+--------------------------------------------------
+
 
 ## 7. 데이터베이스 설계
 
