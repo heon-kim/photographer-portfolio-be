@@ -12,11 +12,16 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { WorksService } from './works.service';
-import type { CreateWorkDto } from './dto/create-work.dto';
-import type { UpdateWorkDto } from './dto/update-work.dto';
+import type { CreateWorkDto as CreateWorkDtoType } from './dto/create-work.dto';
+import type { UpdateWorkDto as UpdateWorkDtoType } from './dto/update-work.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import type { ListWorksQueryDto } from './dto/list-works-query.dto';
-import type { CreateWorkImagePresignedUrlDto } from './dto/create-work-image-presigned-url.dto';
+import type { ListWorksQueryDto as ListWorksQueryDtoType } from './dto/list-works-query.dto';
+import type { CreateWorkImagePresignedUrlDto as CreateWorkImagePresignedUrlDtoType } from './dto/create-work-image-presigned-url.dto';
+
+type CreateWorkDto = CreateWorkDtoType;
+type UpdateWorkDto = UpdateWorkDtoType;
+type ListWorksQueryDto = ListWorksQueryDtoType;
+type CreateWorkImagePresignedUrlDto = CreateWorkImagePresignedUrlDtoType;
 
 @Controller('works')
 export class WorksController {
@@ -57,7 +62,10 @@ export class WorksController {
   @UseGuards(JwtAuthGuard)
   @Post('image/presigned-url')
   @HttpCode(200)
-  createImagePresignedUrl(@Body() body: CreateWorkImagePresignedUrlDto) {
+  createImagePresignedUrl(
+    @Body()
+    body: CreateWorkImagePresignedUrlDto,
+  ) {
     return this.worksService.createImagePresignedUrl(body);
   }
 }

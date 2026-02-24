@@ -243,7 +243,8 @@ export class WorksService {
   }
 
   private normalizeFileName(fileName: string) {
-    const withoutPath = fileName.replace(/\\/g, '/').split('/').pop() ?? fileName;
+    const withoutPath =
+      fileName.replace(/\\/g, '/').split('/').pop() ?? fileName;
     const sanitized = withoutPath.replace(/[^a-zA-Z0-9._-]/g, '-');
 
     return sanitized.length > 0 ? sanitized : 'image';
