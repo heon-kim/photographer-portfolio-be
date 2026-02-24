@@ -12,11 +12,11 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { WorksService } from './works.service';
-import { CreateWorkDto } from './dto/create-work.dto';
-import { UpdateWorkDto } from './dto/update-work.dto';
+import type { CreateWorkDto } from './dto/create-work.dto';
+import type { UpdateWorkDto } from './dto/update-work.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ListWorksQueryDto } from './dto/list-works-query.dto';
-import { CreateWorkImagePresignedUrlDto } from './dto/create-work-image-presigned-url.dto';
+import type { ListWorksQueryDto } from './dto/list-works-query.dto';
+import type { CreateWorkImagePresignedUrlDto } from './dto/create-work-image-presigned-url.dto';
 
 @Controller('works')
 export class WorksController {
@@ -57,9 +57,7 @@ export class WorksController {
   @UseGuards(JwtAuthGuard)
   @Post('image/presigned-url')
   @HttpCode(200)
-  createImagePresignedUrl(
-    @Body() body: CreateWorkImagePresignedUrlDto,
-  ) {
+  createImagePresignedUrl(@Body() body: CreateWorkImagePresignedUrlDto) {
     return this.worksService.createImagePresignedUrl(body);
   }
 }

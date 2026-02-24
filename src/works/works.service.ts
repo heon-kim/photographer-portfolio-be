@@ -50,16 +50,20 @@ export class WorksService {
   }
 
   async create(createWorkDto: CreateWorkDto) {
-    const payload = {
+    const imageUrls = this.normalizeImageUrlArray(createWorkDto.imageUrls);
+
+    if (!imageUrls) {
+      throw new BadRequestException('imageUrls is required');
+    }
+
+    return this.worksRepository.create({
       title: createWorkDto.title,
       year: createWorkDto.year,
       thumbnailUrl: this.normalizeOptionalImageUrl(
         createWorkDto.thumbnailUrl ?? undefined,
       ),
-      imageUrls: this.normalizeImageUrlArray(createWorkDto.imageUrls),
-    };
-
-    return this.worksRepository.create(payload);
+      imageUrls,
+    });
   }
 
   async update(id: number, updateWorkDto: UpdateWorkDto) {
@@ -130,9 +134,7 @@ export class WorksService {
     }
 
     if (updateDto.imageUrls !== undefined) {
-      payload.imageUrls = {
-        set: this.normalizeImageUrlArray(updateDto.imageUrls),
-      };
+      payload.imageUrls = this.normalizeImageUrlArray(updateDto.imageUrls);
     }
 
     return payload;
@@ -152,6 +154,8 @@ export class WorksService {
     return this.ensureUploadUrl(normalized, 'thumbnailUrl');
   }
 
+  private normalizeImageUrlArray(values: string[]): string[];
+  private normalizeImageUrlArray(values?: string[]): string[] | undefined;
   private normalizeImageUrlArray(values?: string[]) {
     if (values === undefined) {
       return undefined;
