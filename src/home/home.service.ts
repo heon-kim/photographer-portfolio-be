@@ -1,11 +1,47 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
 import { S3Service } from '../s3/s3.service';
 import { CreateHomeImagePresignedUrlDto } from './dto/create-home-image-presigned-url.dto';
+import { UpdateHomeDto } from './dto/update-home.dto';
+
+const HOME_ROW_ID = 1;
 
 @Injectable()
 export class HomeService {
-  constructor(private readonly s3Service: S3Service) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3Service: S3Service,
+  ) {}
+
+  getHome() {
+    return this.prisma.home.findUnique({
+      where: { id: HOME_ROW_ID },
+    });
+  }
+
+  async updateHeroImage(updateHomeDto: UpdateHomeDto) {
+    if (!updateHomeDto || typeof updateHomeDto !== 'object') {
+      throw new BadRequestException('Request body is required');
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(updateHomeDto, 'heroImageUrl')) {
+      throw new BadRequestException('heroImageUrl field is required');
+    }
+
+    const heroImageUrl = this.normalizeHeroImageUrl(updateHomeDto.heroImageUrl);
+
+    return this.prisma.home.upsert({
+      where: { id: HOME_ROW_ID },
+      update: {
+        heroImageUrl,
+      },
+      create: {
+        id: HOME_ROW_ID,
+        heroImageUrl,
+      },
+    });
+  }
 
   createImageUploadUrl(dto: CreateHomeImagePresignedUrlDto) {
     if (!dto || typeof dto !== 'object') {
@@ -21,6 +57,20 @@ export class HomeService {
       key: objectKey,
       contentType,
     });
+  }
+
+  private normalizeHeroImageUrl(value: unknown) {
+    if (value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'string') {
+      throw new BadRequestException('heroImageUrl must be a string or null');
+    }
+
+    const trimmed = value.trim();
+
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   private validateFileName(value: unknown) {

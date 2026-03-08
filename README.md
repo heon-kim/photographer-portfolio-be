@@ -179,6 +179,37 @@ Auth API (로그인)
 ### Home API
 홈 화면에 사용되는 메인 이미지 역시 서버가 직접 파일을 받지 않고 presigned URL을 통해 S3에 업로드합니다. 발급받은 `fileUrl`은 프론트엔드가 별도의 콘텐츠 관리 화면에 저장하거나 환경 변수로 주입해 사용할 수 있습니다.
 
+**GET /home**
+--------------------------------------------------
+- 권한: Public
+- Response 200 OK:
+```
+{
+  "id": 1,
+  "heroImageUrl": "https://<bucket>.s3.<region>.amazonaws.com/home/...",
+  "updatedAt": "2026-03-08T03:00:00.000Z"
+}
+```
+- 비고: 레코드가 아직 없다면 `null` 응답이 내려오므로, 프론트에서는 optional 체킹 필요
+--------------------------------------------------
+
+**PUT /home**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Headers: `Content-Type: application/json`
+- Request Body:
+```
+{
+  "heroImageUrl": "https://<bucket>.s3.<region>.amazonaws.com/home/1739999999999-uuid-hero-banner.jpg"
+}
+```
+- Response 200 OK: GET /home 응답과 동일
+- Validation Rules:
+  - `heroImageUrl`는 필수
+  - 빈 문자열 전달 시 `null`로 저장되어 이미지 제거
+  - presigned URL로 발급받은 값만 사용
+--------------------------------------------------
+
 **POST /home/image/presigned-url**
 --------------------------------------------------
 - 권한: 관리자 (Authorization: Bearer <JWT>)
