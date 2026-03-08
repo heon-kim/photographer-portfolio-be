@@ -176,6 +176,34 @@ Auth API (로그인)
   - 업로드 성공 후 `fileUrl` 값을 `PUT /about`의 `imageUrl`로 전달
 --------------------------------------------------
 
+### Home API
+홈 화면에 사용되는 메인 이미지 역시 서버가 직접 파일을 받지 않고 presigned URL을 통해 S3에 업로드합니다. 발급받은 `fileUrl`은 프론트엔드가 별도의 콘텐츠 관리 화면에 저장하거나 환경 변수로 주입해 사용할 수 있습니다.
+
+**POST /home/image/presigned-url**
+--------------------------------------------------
+- 권한: 관리자 (Authorization: Bearer <JWT>)
+- Headers: `Content-Type: application/json`
+- Request Body:
+```
+{
+  "fileName": "hero-banner.jpg",
+  "contentType": "image/jpeg"
+}
+```
+- Response 200 OK:
+```
+{
+  "uploadUrl": "https://s3.../home/...&X-Amz-Signature=...",
+  "fileUrl": "https://<bucket>.s3.<region>.amazonaws.com/home/1739999999999-uuid-hero-banner.jpg",
+  "expiresInSeconds": 300
+}
+```
+- 비고:
+  - `contentType`은 반드시 `image/*` MIME 이어야 함
+  - presigned URL 유효시간은 5분
+  - `fileUrl`만 프론트에서 보관해 두고, 홈 섹션의 이미지 필드를 업데이트할 때 그대로 사용
+--------------------------------------------------
+
 ### Works API
 작품 데이터는 공개 조회가 가능하며, 생성/수정/삭제/이미지 업로드 presigned URL 발급은 관리자 전용입니다. 모든 이미지 URL은 반드시 `POST /works/image/presigned-url`을 통해 받은 `fileUrl`만 허용합니다.
 
