@@ -13,7 +13,11 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: ['http://localhost:3010', 'https://phtograph.netlify.app'],
+    origin: [
+      'http://localhost:3010',
+      'https://phtograph.netlify.app',
+      'https://photographer-portfolio-wine.vercel.app',
+    ],
     credentials: true,
   });
   await app.listen(process.env.PORT ?? 3000);
